@@ -1,0 +1,13 @@
+{
+    "name": "nr/processpodcastsubscriptions",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Neue Rituale",
+            "email": "code@neuerituale.com"
+        }
+    ],
+    "require": {
+        "lukaswhite/podcast-feed-parser": "^0.0.7"
+    }
+}
