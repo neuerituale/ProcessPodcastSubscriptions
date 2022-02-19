@@ -41,7 +41,11 @@ namespace ProcessWire;
 
 		<div class="uk-card-media-left uk-padding uk-width-1-3@s uk-width-1-4@l">
 			<div class="uk-width-auto">
-				<img class="uk-border-rounded" src="<?= $feed->artwork_url; ?>" alt=""">
+				<?php if($feed->artwork_url) : ?>
+					<img class="uk-border-rounded" src="<?= $feed->artwork_url; ?>" alt=""">
+				<?php else : ?>
+					<div class="uk-background-muted uk-border-rounded" style="padding-bottom: 100%"></div>
+				<?php endif; ?>
 			</div>
 		</div>
 

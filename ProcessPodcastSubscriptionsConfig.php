@@ -21,9 +21,10 @@ class ProcessPodcastSubscriptionsConfig extends ModuleConfig
 		$getTimeFuncsFunction = function(){ return $this->timeFuncs; };
 
 		return [
-			'cronSchedule' => 300,
+			'cronSchedule' => 86400,
 			'timeFuncs' => $getTimeFuncsFunction->call($lazyCronInstance),
-			'lastMaintenance' => 0
+			'lastMaintenance' => 0,
+			'parent' => 1
 		];
 	}
 
@@ -41,9 +42,9 @@ class ProcessPodcastSubscriptionsConfig extends ModuleConfig
 			'type' => 'Select',
 			'name' => 'cronSchedule',
 			'label' => __('Cron Schedule'),
-			'description' => __('If selected, the cron will check all action from selected fields.'),
+			'description' => __('If selected, the cron will updates all subscribed feeds.'),
 			'options' => $this->get('timeFuncs'),
-			'columnWidth' => 33,
+			'columnWidth' => 100,
 		]);
 
 		return $inputfields;

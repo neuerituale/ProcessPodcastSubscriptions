@@ -1,0 +1,185 @@
+<?php
+/**
+* COPYRIGHT NOTICE
+* Copyright (c) 2022 Neue Rituale GbR
+* @author NR <code@neuerituale.com>
+*/
+
+namespace ProcessWire;
+
+use Lukaswhite\PodcastFeedParser\Artwork;
+use Lukaswhite\PodcastFeedParser\Episode;
+use Lukaswhite\PodcastFeedParser\Podcast;
+
+class ProcessPodcastSubscriptionsEpisodes extends WireData implements Module, ConfigurableModule
+{
+	public static function getModuleinfo() {
+		return array(
+			'title' => 'Process Podcast Create Episode Pages',
+			'version' => 101,
+			'summary' => 'Process podcast and create a page per episode',
+			'icon' => 'clock-o',
+			'requires' => ['LazyCron', 'ProcessPodcastSubscriptions'],
+			'installs' => 'ProcessPodcastSubscriptions',
+			'permission' => 'podcast-subscriptions',
+			'singular' => true,
+			'autoload' => true,
+		);
+	}
+
+	public function init() {
+		$this->addHookBefore('ProcessPodcastSubscriptions::processPodcast', $this, 'processPodcast');
+
+		$this->episodeParent = $this->pages->findOne($this->episodeParentId);
+		if(!$this->episodeParent->id) $this->episodeParent = $this->pages->get('/');
+	}
+
+	public function processPodcast(HookEvent $event) {
+
+		/** @var WireData $feed */
+		$feed = $event->arguments(0);
+
+		/** @var Podcast $podcast */
+		$podcast = $event->arguments(1);
+
+		// process
+		foreach($podcast->getEpisodes() as $episode) $this->updateOrCreatePodcastEpisode($episode, $podcast, $feed);
+
+	}
+
+	/**
+	 * @param Episode $episode
+	 * @param Podcast $podcast
+	 * @param WireData $feed
+	 * @return void|null
+	 * @throws WireException
+	 */
+	public function updateOrCreatePodcastEpisode(Episode $episode, Podcast $podcast, WireData $feed) {
+
+		$podcastId = $episode->getGuid();
+		if(!$podcastId) return null;
+
+		$title = $episode->getTitle();
+
+		/** @var Page $podcastEpisode */
+		$podcastEpisode = $this->getPodcastEpisodePageByIdOrCreateNew($podcastId, $title);
+
+		// Set fields
+		$podcastEpisode->title = html_entity_decode($episode->getTitle());
+		$podcastEpisode->episode_description = html_entity_decode($episode->getDescription());
+		$podcastEpisode->episode_duration = $this->parseDuration($episode->getDuration());
+		$podcastEpisode->episode_media = $episode->getMedia()->getUri();
+		$podcastEpisode->episode_number = $episode->getEpisodeNumber();
+
+		// Add feed
+		// this is the linking property
+		$podcastEpisode->podcast_feed = $feed->feed_url;
+
+		// Add Artwork
+		$artwork = $episode->getArtwork() ?? $podcast->getArtwork();
+		if(($artwork instanceof Artwork) && !$podcastEpisode->episode_image->count()) {
+
+			// get Field
+			/** @var FieldtypeImage|FieldtypeFile $episodeImage */
+			$episodeImage = $podcastEpisode->getField('episode_image');
+			$allowedExtensions = explode(' ', $episodeImage->extensions);
+
+			// filename
+			// build filename from title or id
+			$filename = $podcastEpisode->title;
+			if(empty($filename)) $filename = $podcastId;
+			$filename = $this->sanitizer->snakeCase(strtolower( $filename ));
+
+			// download file and save in tmp folder
+			$imageContent = $this->files->fileGetContents($artwork->getUri());
+			$tempDir = $this->files->tempDir();
+			$path = $tempDir->get();
+			$pathToFile = $path . $filename;
+			$tmpFile = $this->files->filePutContents($pathToFile, $imageContent);
+			if($tmpFile) {
+
+				// find extension by mime type and check if is allowed in this field
+				$internalFileExtensionFromMimeType = strtolower(explode('/', mime_content_type($pathToFile))[1] ?? 'unknown');
+				if(
+					in_array($internalFileExtensionFromMimeType, $allowedExtensions) &&
+					$this->files->rename($pathToFile, $pathToFile . '.' . $internalFileExtensionFromMimeType)
+				) {
+					$pathToFile = $pathToFile . '.' . $internalFileExtensionFromMimeType;
+					$podcastEpisode->episode_image = null;
+					$podcastEpisode->episode_image->add($pathToFile);
+				}
+			}
+
+		}
+
+		// Update published date
+		if($podcastEpisode->published !== (int) $episode->getPublishedDate()->format('U')) {
+			$mysqlDateTime = $episode->getPublishedDate()->format('Y-m-d H:i:s');
+			$podcastEpisode->set('published', $mysqlDateTime);
+			$this->database->exec("UPDATE pages SET published='{$mysqlDateTime}', created='{$mysqlDateTime}' WHERE id={$podcastEpisode->id}");
+		}
+
+		// Update
+		$podcastEpisode->save();
+	}
+
+	/**
+	 * Find or create and save new media Page
+	 * @param $episode_id
+	 * @param string $title
+	 * @return NullPage|Page
+	 * @throws WireException
+	 */
+	public function getPodcastEpisodePageByIdOrCreateNew($episode_id, string $title = '') {
+		$podcast_episode = $this->pages->findOne('template=podcast-episode,episode_id=' . $episode_id);
+
+		if(!$podcast_episode->id) {
+			$podcast_episode = new Page($this->templates->get('podcast-episode'));
+			$podcast_episode
+				->set('episode_id', $episode_id)
+				->set('title', $title)
+				->set('parent', $this->episodeParent)
+				;
+			$podcast_episode->save(['noHooks' => true]);
+		}
+		$podcast_episode->of(false);
+		return $podcast_episode;
+	}
+
+	public function parseDuration($duration) {
+
+		// HH:MM:SS, MM:SS, MMM:SS
+		if (preg_match('/\:/', $duration)) {
+			$parts = array_reverse(explode(':', $duration));
+			$seconds = (float) ($parts[0] ?? .0);
+			$minutes = (int) ($parts[1] ?? 0);
+			$hours = (int) ($parts[2] ?? 0);
+			return ($hours * 60 * 60) + ($minutes * 60) + $seconds;
+		}
+
+		// Seconds
+		else {
+			return intval($duration);
+		}
+	}
+
+	/**
+	 * Install
+	 * Add field
+	 */
+	public function install() {
+
+		// create fields
+		// create template
+
+		// copy template file in templates folder
+	}
+
+	/**
+	 * @return void
+	 */
+	public function uninstall() {
+		// messsage delete template and fields
+	}
+
+}

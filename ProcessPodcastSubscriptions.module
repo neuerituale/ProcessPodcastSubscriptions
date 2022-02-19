@@ -1,28 +1,19 @@
 <?php
 /**
 * COPYRIGHT NOTICE
-* Copyright (c) 2021 Neue Rituale GbR
+* Copyright (c) 2022 Neue Rituale GbR
 * @author NR <code@neuerituale.com>
 */
 
 namespace ProcessWire;
 
+use Lukaswhite\PodcastFeedParser\Exceptions\FileNotFoundException;
+use Lukaswhite\PodcastFeedParser\Exceptions\InvalidXmlException;
 use Lukaswhite\PodcastFeedParser\Parser;
 use Lukaswhite\PodcastFeedParser\Podcast;
 
 class ProcessPodcastSubscriptions extends Process implements Module, ConfigurableModule
 {
-
-	/**
-	 * @return array
-	 *
-	 *
-	 * Save rss feed in db
-	 * Field: feed url, last update, created,
-	 *
-	 *
-	 *
-	 */
 
 	const dbTableName = 'podcast_subscriptions';
 	const logFileName = 'podcast-subscriptions';
@@ -64,10 +55,10 @@ class ProcessPodcastSubscriptions extends Process implements Module, Configurabl
 
 	/**
 	 * Show table
-	 * @return array|bool|string|null
-	 * @throws WirePermissionException
+	 * @return array|null
+	 * @throws WirePermissionException|WireException
 	 */
-	public function ___execute() {
+	public function ___execute() : ?array {
 
 		// Add new feed
 		if($this->session->CSRF->hasValidToken()) {
@@ -89,8 +80,8 @@ class ProcessPodcastSubscriptions extends Process implements Module, Configurabl
 	 * Manual update
 	 * @return void
 	 * @throws WireException
-	 * @throws \Lukaswhite\PodcastFeedParser\Exceptions\FileNotFoundException
-	 * @throws \Lukaswhite\PodcastFeedParser\Exceptions\InvalidXmlException
+	 * @throws FileNotFoundException
+	 * @throws InvalidXmlException
 	 */
 	public function ___executeUpdate() {
 		$id = $this->sanitizer->int($this->input->urlSegment2);
@@ -116,8 +107,8 @@ class ProcessPodcastSubscriptions extends Process implements Module, Configurabl
 	 * @param string $feedUrl
 	 * @return Podcast
 	 * @throws WireException
-	 * @throws \Lukaswhite\PodcastFeedParser\Exceptions\FileNotFoundException
-	 * @throws \Lukaswhite\PodcastFeedParser\Exceptions\InvalidXmlException
+	 * @throws FileNotFoundException
+	 * @throws InvalidXmlException
 	 */
 	public function addFeed(string $feedUrl = '') : Podcast {
 
@@ -152,10 +143,10 @@ class ProcessPodcastSubscriptions extends Process implements Module, Configurabl
 	 * @param bool $flushFeedCache
 	 * @return bool|mixed|Wire
 	 * @throws WireException
-	 * @throws \Lukaswhite\PodcastFeedParser\Exceptions\FileNotFoundException
-	 * @throws \Lukaswhite\PodcastFeedParser\Exceptions\InvalidXmlException
+	 * @throws FileNotFoundException
+	 * @throws InvalidXmlException
 	 */
-	public function updateFeed(int $id, $flushFeedCache = true) {
+	public function updateFeed(int $id, bool $flushFeedCache = true) {
 
 		// find feed
 		$feed = $this->getFeeds('id=' . $id)->first();
@@ -182,8 +173,8 @@ class ProcessPodcastSubscriptions extends Process implements Module, Configurabl
 	 * Update all feeds
 	 * @return $this
 	 * @throws WireException
-	 * @throws \Lukaswhite\PodcastFeedParser\Exceptions\FileNotFoundException
-	 * @throws \Lukaswhite\PodcastFeedParser\Exceptions\InvalidXmlException
+	 * @throws FileNotFoundException
+	 * @throws InvalidXmlException
 	 */
 	public function updateAllFeeds() : ProcessPodcastSubscriptions {
 
@@ -196,10 +187,10 @@ class ProcessPodcastSubscriptions extends Process implements Module, Configurabl
 
 	/**
 	 * @param string $selector
+	 * @param bool $fresh
 	 * @return WireArray
-	 * @throws WireException
 	 */
-	public function getFeeds(string $selector = '', $fresh = false) {
+	public function getFeeds(string $selector = '', bool $fresh = false) : ?WireArray {
 
 		$result = $this->feedsCache;
 
@@ -227,9 +218,9 @@ class ProcessPodcastSubscriptions extends Process implements Module, Configurabl
 	 * Delete feed by id
 	 * @param int $id
 	 * @return bool
-	 * @throws WireException
+	 * @throws WireException|\Exception
 	 */
-	public function deleteFeed(int $id) {
+	public function deleteFeed(int $id) : bool {
 		$feed = $this->getFeeds('id=' . $id)->first();
 		if(!$feed) throw new \Exception($this->_('Invalid feed id'));
 
@@ -240,22 +231,21 @@ class ProcessPodcastSubscriptions extends Process implements Module, Configurabl
 
 	/**
 	 * @param $feedUrl
-	 * @return \Lukaswhite\PodcastFeedParser\Podcast
-	 * @throws \Lukaswhite\PodcastFeedParser\Exceptions\FileNotFoundException
-	 * @throws \Lukaswhite\PodcastFeedParser\Exceptions\InvalidXmlException
+	 * @return Podcast|null
+	 * @throws InvalidXmlException
 	 */
-	public function fetchAndParseFeed($feedUrl) {
+	public function fetchAndParseFeed($feedUrl) : ?Podcast {
 		$this->loadDependencies();
 
 		$fileContent = $this->files->fileGetContents($feedUrl);
 		if(!$fileContent) throw new \Exception($this->_('Invalid feed url'));
 
+		libxml_use_internal_errors(true);
 		$parser = new Parser();
 		$parser->setContent($fileContent);
-
-		/** @var Podcast $podcast */
 		$podcast = $parser->run();
-		return $podcast->getType() ? $podcast : null;
+
+		return $podcast->getTitle() ? $podcast : null;
 	}
 
 	/**
@@ -264,7 +254,7 @@ class ProcessPodcastSubscriptions extends Process implements Module, Configurabl
 	 * @return void
 	 */
 	public function ___processPodcast(WireData $feed, Podcast $podcast) {
-		$this->log('processPodcast done', ['name' => self::logFileName]);
+		$this->log('Process podcast done', ['name' => self::logFileName]);
 	}
 
 	/** HELPER */
@@ -312,6 +302,7 @@ class ProcessPodcastSubscriptions extends Process implements Module, Configurabl
 	/**
 	 * @return void
 	 * @throws \Exception
+	 * @method loadDependencies
 	 */
 	public function ___loadDependencies () {
 		if(!file_exists(__DIR__ . '/vendor/autoload.php')) throw new \Exception('Please install podcast-feed-parser in your the module directory (composer install).');
@@ -351,6 +342,7 @@ class ProcessPodcastSubscriptions extends Process implements Module, Configurabl
 			$this->error($exception->getMessage());
 		}
 	}
+
 }
 
 class Feed extends WireData {
