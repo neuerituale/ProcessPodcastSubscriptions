@@ -26,18 +26,21 @@ The additional example module `ProcessPodcastSubscriptionsEpisodes` create new p
 4. Install the additional module `ProcessPodcastSubscriptionsEpisodes`
 5. Subscribe Podcast feeds...
 
-## Configuration
 
+
+### Configure Lazycron
 `Modules` > `Configure` > `ProcessPodcastSubscriptions`
 
-`Modules` > `Configure` > `ProcessPodcastSubscriptionsEpisodes`
-
-### Lazycron
 Setup the Lazycron schedule. The cache expiration is configurable in the field settings.
 
-![Lazycron](https://user-images.githubusercontent.com/11630948/116866358-8e7b6000-ac0b-11eb-8793-a5a06546ff09.png)
+![Lazycron](https://user-images.githubusercontent.com/11630948/154841723-e624ce01-eeb4-4938-9d23-f9b5c5636d95.png)
 
-### Podcast Class and Episode Class
+### Episode Parent
+`Modules` > `Configure` > `ProcessPodcastSubscriptionsEpisodes`
+
+![Episode Parent](https://user-images.githubusercontent.com/11630948/154841724-b4c709a7-cb27-41d6-98a9-ea1ed73a742c.png)
+
+## Podcast Class and Episode Class
 The podcast object is the original object from podcast-feed-parser and has a lot of brilliant methods.
 - [Podcast class](https://htmlpreview.github.io/?https://github.com/lukaswhite/podcast-feed-parser/blob/main/docs/html/classes/Lukaswhite_PodcastFeedParser_Podcast.xhtml)
 - [Episode class](https://htmlpreview.github.io/?https://raw.githubusercontent.com/lukaswhite/podcast-feed-parser/main/docs/html/classes/Lukaswhite_PodcastFeedParser_Episode.xhtml)
@@ -84,7 +87,7 @@ class Episode {
 }
 ```
 
-### Hook
+## Hook
 ```php
 
 // init.php or ready.php
