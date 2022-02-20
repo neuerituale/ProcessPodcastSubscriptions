@@ -330,6 +330,15 @@ class ProcessPodcastSubscriptions extends Process implements Module, Configurabl
 			ALTER TABLE ".self::dbTableName." ADD PRIMARY KEY (`id`);
 			ALTER TABLE ".self::dbTableName." MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 		");
+
+		// Create process page
+		$pageInfo = self::getModuleInfo()['page'];
+		$page = new Page($this->templates->get('admin'));
+		$page->name = $pageInfo['name'];
+		$page->title = $pageInfo['title'];
+		$page->parent = $this->pages->get($this->config->adminRootPageID);
+		$page->process = $this->className;
+		$page->save();
 	}
 
 	/**

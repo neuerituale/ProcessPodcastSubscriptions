@@ -17,24 +17,28 @@ class ProcessPodcastSubscriptionsEpisodes extends WireData implements Module, Co
 		return array(
 			'title' => 'Process Podcast Create Episode Pages',
 			'version' => 101,
-			'summary' => 'Process podcast and create a page per episode',
+			'summary' => 'Example Module for creating podcast episodes pages with ProcessPodcastSubscriptions',
 			'icon' => 'clock-o',
 			'requires' => ['LazyCron', 'ProcessPodcastSubscriptions'],
 			'installs' => 'ProcessPodcastSubscriptions',
-			'permission' => 'podcast-subscriptions',
 			'singular' => true,
 			'autoload' => true,
 		);
 	}
 
 	public function init() {
-		$this->addHookBefore('ProcessPodcastSubscriptions::processPodcast', $this, 'processPodcast');
+		$this->addHookBefore('ProcessPodcastSubscriptions::processPodcast', $this, 'hookProcessPodcast');
 
 		$this->episodeParent = $this->pages->findOne($this->episodeParentId);
 		if(!$this->episodeParent->id) $this->episodeParent = $this->pages->get('/');
 	}
 
-	public function processPodcast(HookEvent $event) {
+	/**
+	 * @param HookEvent $event
+	 * @return void
+	 * @throws WireException
+	 */
+	public function hookProcessPodcast(HookEvent $event) {
 
 		/** @var WireData $feed */
 		$feed = $event->arguments(0);
@@ -54,7 +58,7 @@ class ProcessPodcastSubscriptionsEpisodes extends WireData implements Module, Co
 	 * @return void|null
 	 * @throws WireException
 	 */
-	public function updateOrCreatePodcastEpisode(Episode $episode, Podcast $podcast, WireData $feed) {
+	public function ___updateOrCreatePodcastEpisode(Episode $episode, Podcast $podcast, WireData $feed) {
 
 		$podcastId = $episode->getGuid();
 		if(!$podcastId) return null;
@@ -130,7 +134,7 @@ class ProcessPodcastSubscriptionsEpisodes extends WireData implements Module, Co
 	 * @return NullPage|Page
 	 * @throws WireException
 	 */
-	public function getPodcastEpisodePageByIdOrCreateNew($episode_id, string $title = '') {
+	public function ___getPodcastEpisodePageByIdOrCreateNew($episode_id, string $title = '') {
 		$podcast_episode = $this->pages->findOne('template=podcast-episode,episode_id=' . $episode_id);
 
 		if(!$podcast_episode->id) {
@@ -146,7 +150,12 @@ class ProcessPodcastSubscriptionsEpisodes extends WireData implements Module, Co
 		return $podcast_episode;
 	}
 
-	public function parseDuration($duration) {
+	/**
+	 * Parse time to seconds
+	 * @param $duration
+	 * @return float|int
+	 */
+	public function ___parseDuration($duration) {
 
 		// HH:MM:SS, MM:SS, MMM:SS
 		if (preg_match('/\:/', $duration)) {
@@ -159,7 +168,7 @@ class ProcessPodcastSubscriptionsEpisodes extends WireData implements Module, Co
 
 		// Seconds
 		else {
-			return intval($duration);
+			return floatval($duration);
 		}
 	}
 
@@ -169,17 +178,81 @@ class ProcessPodcastSubscriptionsEpisodes extends WireData implements Module, Co
 	 */
 	public function install() {
 
-		// create fields
-		// create template
+		// Create fields
+		$fields = $this->getFieldData();
+		$field_names = '';
+
+		foreach ($fields as $field_name => $field_data) {
+			try {
+				$f = new Field();
+				$f->setImportData($field_data);
+				$f->save();
+				$field_names .= $field_name . " ";
+			} catch(\Exception $e) {
+				$this->warning($e->getMessage());
+				continue;
+			}
+
+		}
+		$this->message(sprintf($this->_('Created fields: %s'), $field_names));
+
+		// Create Templates
+		$templates = $this->getTemplateData();
+		$template_names = '';
+
+		foreach ($templates as $template_name => $template_data) {
+			try {
+				$fg = new Fieldgroup();
+				$fg->name = $template_name;
+				$template_names .= $template_name . " ";
+				foreach ($template_data['fieldgroupFields'] as $fieldname) {
+					$fg->add($fieldname);
+				}
+				$fg->save();
+				$t = new Template();
+				$t->setImportData($template_data) ;
+				$t->save();
+			} catch(\Exception $e) {
+				$this->warning($e->getMessage());
+				continue;
+			}
+
+		}
+		$this->message(sprintf($this->_('Created template: %s'), $template_names));
 
 		// copy template file in templates folder
+		$this->files->copy(
+			$this->config->paths->ProcessPodcastSubscriptionsEpisodes . 'templates/',
+			$this->config->paths->templates
+		);
+
+		$this->message(sprintf($this->_('Created template files: %s'), 'podcast-episode.php'));
+
 	}
 
 	/**
 	 * @return void
 	 */
 	public function uninstall() {
-		// messsage delete template and fields
+		$this->message(sprintf($this->_('Please delete the template "%1$s" and all field with the prefix "%2$s" by yourself.'), 'podcast-episode', 'episode_'));
+	}
+
+	/**
+	 * Get field data
+	 * @return mixed
+	 */
+	private function getFieldData() {
+		$fields_json = file_get_contents(__DIR__ . "/data/fields.json");
+		return json_decode($fields_json, true);
+	}
+
+	/**
+	 * Get template data
+	 * @return mixed
+	 */
+	private function getTemplateData() {
+		$templates_json = file_get_contents(__DIR__ . "/data/templates.json");
+		return json_decode($templates_json, true);
 	}
 
 }
