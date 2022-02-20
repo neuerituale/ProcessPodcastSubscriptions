@@ -17,9 +17,9 @@ class ProcessPodcastSubscriptions extends Process implements Module, Configurabl
 
 	const dbTableName = 'podcast_subscriptions';
 	const logFileName = 'podcast-subscriptions';
-	private $feedsCache = null;
+	private ?WireArray $feedsCache = null;
 
-	public static function getModuleinfo() {
+	public static function getModuleInfo() {
 		return array(
 			'title' => 'Process Podcast Subscriptions',
 			'version' => 101,
