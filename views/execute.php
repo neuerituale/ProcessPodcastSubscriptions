@@ -26,7 +26,7 @@ namespace ProcessWire;
 	<div class="uk-card uk-card-primary uk-margin">
 		<div>
 			<div class="uk-card-body uk-text-lead uk-text-muted uk-padding-small uk-text-center">
-				<?= __('Please add a podcast feed.'); ?>
+				<?= __('Add a podcast feed'); ?>
 			</div>
 		</div>
 	</div>

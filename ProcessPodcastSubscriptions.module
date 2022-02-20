@@ -86,7 +86,7 @@ class ProcessPodcastSubscriptions extends Process implements Module, Configurabl
 	public function ___executeUpdate() {
 		$id = $this->sanitizer->int($this->input->urlSegment2);
 		$feed = $this->updateFeed($id);
-		$this->message(sprintf(__('Podcast "%s" updated'), $feed->title));
+		$this->message(sprintf($this->_('Podcast "%s" updated'), $feed->title));
 		$this->session->redirect($this->page->url);
 	}
 
@@ -97,7 +97,7 @@ class ProcessPodcastSubscriptions extends Process implements Module, Configurabl
 	 */
 	public function ___executeDelete() {
 		$id = $this->sanitizer->int($this->input->urlSegment2);
-		if($this->deleteFeed($id)) $this->message(__('Podcast deleted'));
+		if($this->deleteFeed($id)) $this->message($this->_('Podcast deleted'));
 		$this->session->redirect($this->page->url);
 	}
 

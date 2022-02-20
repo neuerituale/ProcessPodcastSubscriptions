@@ -33,7 +33,7 @@ class ProcessPodcastSubscriptionsEpisodesConfig extends ModuleConfig
 		$inputfields->add([
 			'type' => 'PageListSelect',
 			'name' => 'episodeParentId',
-			'label' => 'Parent for new episode pages',
+			'label' => $this->_('Parent for new episode pages'),
 			'allowUnpub' => true,
 
 			'collapsed' => Inputfield::collapsedNever,

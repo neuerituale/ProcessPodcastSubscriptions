@@ -31,7 +31,6 @@ class ProcessPodcastSubscriptionsConfig extends ModuleConfig
 	/**
 	 * @return InputfieldWrapper
 	 * @throws WireException
-	 * @throws WirePermissionException
 	 */
 	public function getInputfields() {
 
@@ -41,8 +40,8 @@ class ProcessPodcastSubscriptionsConfig extends ModuleConfig
 		$inputfields->add([
 			'type' => 'Select',
 			'name' => 'cronSchedule',
-			'label' => __('Cron Schedule'),
-			'description' => __('If selected, the cron will updates all subscribed feeds.'),
+			'label' => $this->_('Cron Schedule'),
+			'description' => $this->_('If selected, the cron will updates all subscribed feeds.'),
 			'options' => $this->get('timeFuncs'),
 			'columnWidth' => 100,
 		]);
