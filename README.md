@@ -105,4 +105,5 @@ $wire->addHookBefore('ProcessPodcastSubscriptions::processPodcast', function (Ho
 ```
 
 ## Todos
-- respect lastBuildDate from feed for update action
+- Respect lastBuildDate from feed for update action
+- Handle long running script on subscribe.
