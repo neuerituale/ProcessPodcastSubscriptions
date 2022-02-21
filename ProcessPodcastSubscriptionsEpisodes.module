@@ -13,7 +13,7 @@ use Lukaswhite\PodcastFeedParser\Podcast;
 
 class ProcessPodcastSubscriptionsEpisodes extends WireData implements Module, ConfigurableModule
 {
-	public static function getModuleinfo() {
+	public static function getModuleInfo() {
 		return array(
 			'title' => 'Process Podcast Create Episode Pages',
 			'version' => 101,
@@ -29,7 +29,7 @@ class ProcessPodcastSubscriptionsEpisodes extends WireData implements Module, Co
 	public function init() {
 		$this->addHookBefore('ProcessPodcastSubscriptions::processPodcast', $this, 'hookProcessPodcast');
 
-		$this->episodeParent = $this->pages->findOne($this->episodeParentId);
+		$this->episodeParent = $this->pages->get($this->episodeParentId);
 		if(!$this->episodeParent->id) $this->episodeParent = $this->pages->get('/');
 	}
 
