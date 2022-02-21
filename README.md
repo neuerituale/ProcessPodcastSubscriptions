@@ -2,18 +2,18 @@
 
 ## What it does
 
-Subscribe Podcast RSS feed and save as something you want.
-It used the great PHP Library [podcast-feed-parser](https://github.com/lukaswhite/podcast-feed-parser) by
-Lukas White and adds some processwire magic. Thanks!
+Subscribe to podcast RSS feeds and save the data as anything you want.
+The module uses the great PHP Library [podcast-feed-parser](https://github.com/lukaswhite/podcast-feed-parser) by
+Lukas White, which makes processing the podcast data a breeze. Thanks!
 
-The additional example module `ProcessPodcastSubscriptionsEpisodes` create new pages per episode. This module is optional.
+The module comes with an example module `ProcessPodcastSubscriptionsEpisodes` to demonstrate how to create new pages per episode.
 
 ## Features
 - Subscribe / Unsubscribe Podcast XML-Feeds
 - Periodically fetch feeds with LazyCron
 - Simple hookable actions
 - ProcessModule for administration
-- Optional module `ProcessPodcastSubscriptionsEpisodes` creates episode pages
+- Optional module `ProcessPodcastSubscriptionsEpisodes`
 
 ## Install
 
@@ -23,15 +23,15 @@ The additional example module `ProcessPodcastSubscriptionsEpisodes` create new p
    composer install
    ```
 3. If not done automatically, create a new admin page with the process `ProcessPodcastSubscriptions`
-4. Install the additional module `ProcessPodcastSubscriptionsEpisodes`
-5. Subscribe Podcast feeds...
+4. Install the additional module `ProcessPodcastSubscriptionsEpisodes` (optional) or build your own processor
+5. Subscribe to Podcast feeds...
 
 
 
 ### Configure Lazycron
 `Modules` > `Configure` > `ProcessPodcastSubscriptions`
 
-Setup the Lazycron schedule. The cache expiration is configurable in the field settings.
+Setup the LazyCron schedule. The cache expiration is configurable in the field settings.
 
 ![Lazycron](https://user-images.githubusercontent.com/11630948/154841723-e624ce01-eeb4-4938-9d23-f9b5c5636d95.png)
 
@@ -41,7 +41,7 @@ Setup the Lazycron schedule. The cache expiration is configurable in the field s
 ![Episode Parent](https://user-images.githubusercontent.com/11630948/154841724-b4c709a7-cb27-41d6-98a9-ea1ed73a742c.png)
 
 ## Podcast Class and Episode Class
-The podcast object is the original object from podcast-feed-parser and has a lot of brilliant methods.
+The `Podcast` object has a lot of handy methods to do anything you want with the returned data.
 - [Podcast class](https://htmlpreview.github.io/?https://github.com/lukaswhite/podcast-feed-parser/blob/main/docs/html/classes/Lukaswhite_PodcastFeedParser_Podcast.xhtml)
 - [Episode class](https://htmlpreview.github.io/?https://raw.githubusercontent.com/lukaswhite/podcast-feed-parser/main/docs/html/classes/Lukaswhite_PodcastFeedParser_Episode.xhtml)
 
@@ -66,7 +66,7 @@ class Podcast implements HasArtwork {
    public string getExplicit()
    public array getCategories()
    
-   /* ... and many more ... */
+   /* ... and much more ... */
 }
 ```
 
@@ -83,7 +83,7 @@ class Episode {
     public string getLink()
     public string getExplicit()
     
-    /* ... and many more ... */
+    /* ... and much more ... */
 }
 ```
 
@@ -108,5 +108,5 @@ $wire->addHookBefore('ProcessPodcastSubscriptions::processPodcast', function (Ho
 ```
 
 ## Todos
-- Respect lastBuildDate from feed for update action
+- Respect lastBuildDate from feed for update action.
 - Handle long running script on subscribe.
