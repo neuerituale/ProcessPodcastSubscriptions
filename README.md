@@ -122,7 +122,7 @@ $wire->addHookBefore('ProcessPodcastSubscriptions::processPodcast', function (Ho
 ## Example Rendering
 In the folder `ProcessPodcastSubscriptions/templates/podcasts-example.php` you will find a sample rendering for a podcast and episode list. Have fun with it.
 
-![Episode Parent](https://user-images.githubusercontent.com/11630948/190590492-64fba28f-342b-4500-b074-03390ab5ba71.png)
+![Episode Parent](https://user-images.githubusercontent.com/11630948/190590890-473dbdcb-884a-46fc-ad47-20efea1424b7.png)
 
 ## Todos
 - Respect lastBuildDate from feed for update action.
