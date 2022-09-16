@@ -46,6 +46,16 @@ class ProcessPodcastSubscriptionsConfig extends ModuleConfig
 			'columnWidth' => 100,
 		]);
 
+		/** @var InputfieldSelect */
+		$inputfields->add([
+			'type' => 'Textarea',
+			'name' => 'subscriptionLinksConfig',
+			'label' => $this->_('Subscription Links'),
+			'description' => $this->_('One per line name and label'),
+			'notes' => $this->_('spotify=Spotify'),
+			'columnWidth' => 100,
+		]);
+
 		return $inputfields;
 	}
 }

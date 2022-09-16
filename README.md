@@ -27,18 +27,30 @@ The module comes with an example module `ProcessPodcastSubscriptionsEpisodes` to
 5. Subscribe to Podcast feeds...
 
 
+## Configuration Subscriptions
 
-### Configure Lazycron
 `Modules` > `Configure` > `ProcessPodcastSubscriptions`
 
+###  Lazycron
 Setup the LazyCron schedule. The cache expiration is configurable in the field settings.
 
 ![Lazycron](https://user-images.githubusercontent.com/11630948/154841723-e624ce01-eeb4-4938-9d23-f9b5c5636d95.png)
 
-### Episode Parent
+### Episode Meta
+You can add subscribe links to the podcast.
+Configure the providers and then attach the links to the podcast.
+
+![Episode Parent](https://user-images.githubusercontent.com/11630948/190591854-cbe87d80-be1e-41f6-aaf9-c2b266c97382.png)
+
+## Configuration Episodes
+
 `Modules` > `Configure` > `ProcessPodcastSubscriptionsEpisodes`
 
+### Episode Parent
+Set parent page for new episode pages.
+
 ![Episode Parent](https://user-images.githubusercontent.com/11630948/154841724-b4c709a7-cb27-41d6-98a9-ea1ed73a742c.png)
+
 
 ## Podcast Class and Episode Class
 The `Podcast` object has a lot of handy methods to do anything you want with the returned data.
@@ -106,6 +118,11 @@ $wire->addHookBefore('ProcessPodcastSubscriptions::processPodcast', function (Ho
 
 });
 ```
+
+## Example Rendering
+In the folder `ProcessPodcastSubscriptions/templates/podcasts-example.php` you will find a sample rendering for a podcast and episode list. Have fun with it.
+
+![Episode Parent](https://user-images.githubusercontent.com/11630948/190590492-64fba28f-342b-4500-b074-03390ab5ba71.png)
 
 ## Todos
 - Respect lastBuildDate from feed for update action.

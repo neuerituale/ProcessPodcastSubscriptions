@@ -7,22 +7,32 @@
 
 namespace ProcessWire;
 
+use Exception;
 use Lukaswhite\PodcastFeedParser\Exceptions\FileNotFoundException;
 use Lukaswhite\PodcastFeedParser\Exceptions\InvalidXmlException;
 use Lukaswhite\PodcastFeedParser\Parser;
 use Lukaswhite\PodcastFeedParser\Podcast;
+use PDO;
+use PDOException;
+
+require_once(/*NoCompile*/__DIR__ . '/vendor/autoload.php');
+
+/**
+ * @method Parser getFeedParserInstance($args = null)
+ */
 
 class ProcessPodcastSubscriptions extends Process implements Module, ConfigurableModule
 {
 
 	const dbTableName = 'podcast_subscriptions';
 	const logFileName = 'podcast-subscriptions';
+	const SCHEMA_VERSION = 2;
 	private ?WireArray $feedsCache = null;
 
 	public static function getModuleInfo() {
 		return array(
 			'title' => 'Process Podcast Subscriptions',
-			'version' => 101,
+			'version' => 102,
 			'summary' => 'Subscribe Podcast RSS feed and save as new page',
 			'icon' => 'clock-o',
 			'requires' => ['LazyCron'],
@@ -37,18 +47,48 @@ class ProcessPodcastSubscriptions extends Process implements Module, Configurabl
 		);
 	}
 
+	/**
+	 * Init
+	 * @return void
+	 * @throws WireException
+	 */
 	public function init() {
+
+		// set initial schema version
+		if(!$this->schemaVersion) $this->schemaVersion = 1;
+
+		// update the database schema (if not the latest one yet)
+		if($this->schemaVersion < self::SCHEMA_VERSION) $this->updateDatabaseSchema();
+
+		// build subscription links array
+		$subscriptionLinks = [];
+		if(!empty($this->subscriptionLinksConfig)) {
+			$links = explode("\n", $this->subscriptionLinksConfig);
+			foreach($links as $link) {
+				list($name, $label) = array_map('trim', explode('=', $link, 2));
+				$subscriptionLinks[$name] = $label;
+			}
+		}
+		$this->subscriptionLinks = $subscriptionLinks;
 
 		// find hookname and init lazy cron hook
 		$hookName = @$this->timeFuncs[$this->cronSchedule];
 		if($hookName && $this->modules->isInstalled('LazyCron')) $this->addHook('LazyCron::' . $hookName, $this, 'updateAllFeeds');
 	}
 
+	/**
+	 * Ready
+	 * @return void
+	 */
 	public function ready() {
 
 		// add css in Backend
 		if($this->page->template->name === 'admin')	$this->config->styles->add($this->config->urls->ProcessPodcastSubscriptions . "ProcessPodcastSubscriptions.css");
 
+		// hook field options for field podcast
+		if($this->modules->isInstalled('FieldtypeDynamicOptions') && $this->fields->has('podcast')) {
+			$this->wire->addHookAfter('FieldtypeDynamicOptions::getSelectableOptions', $this, 'hookPodcastFieldOptions');
+		}
 	}
 
 	/** VIEWS */
@@ -62,16 +102,34 @@ class ProcessPodcastSubscriptions extends Process implements Module, Configurabl
 
 		// Add new feed
 		if($this->session->CSRF->hasValidToken()) {
-			$feedUrl = $this->input->post('feed_url', 'url');
-			try {
-				$this->addFeed($feedUrl);
-			} catch(\Exception $exception) {
-				$this->error($exception->getMessage());
+
+			// submit feed
+			if($this->input->post('submit')) {
+				$feedUrl = $this->input->post('feed_url', 'url');
+				try {
+					$this->addFeed($feedUrl);
+				} catch(Exception $exception) {
+					$this->error($exception->getMessage());
+				}
 			}
+
+			// update feed info
+			elseif($this->input->post('feedmeta')) {
+
+				$feedId = $this->input->post('feedId', 'int');
+				$meta = $this->processMetaInput();
+				$feed = $this->getFeeds('id='.$feedId)->first();
+
+				if($feed instanceof Feed) $this->updateFeedMeta($feed, $meta);
+
+			}
+
 		}
 
 		return [
-			'feeds' => $this->getFeeds()
+			'feeds' => $this->getFeeds(),
+			'subscriptionLinks' => $this->subscriptionLinks,
+			'meta' => $this->meta
 		];
 
 	}
@@ -113,16 +171,16 @@ class ProcessPodcastSubscriptions extends Process implements Module, Configurabl
 	public function addFeed(string $feedUrl = '') : Podcast {
 
 		// check url
-		if(empty($feedUrl)) throw new \Exception($this->_('Empty feed url'));
+		if(empty($feedUrl)) throw new Exception($this->_('Empty feed url'));
 
 		// duplication check
 		$checkStatement = $this->database->prepare('SELECT * FROM ' . self::dbTableName . ' WHERE feed_url=:feedUrl');
 		$checkStatement->execute(['feedUrl' => $feedUrl]);
-		if($checkStatement->fetchColumn(0)) throw new \Exception($this->_('Feed already exists'));
+		if($checkStatement->fetchColumn(0)) throw new Exception($this->_('Feed already exists'));
 
 		// check feed
 		$podcast = $this->fetchAndParseFeed($feedUrl);
-		if(!$podcast) throw new \Exception($this->_('Invalid feed, no type found.'));
+		if(!$podcast) throw new Exception($this->_('Invalid feed, no type found.'));
 
 		// add to db
 		$addStatement = $this->database->prepare('INSERT INTO ' . self::dbTableName . ' (title,description,artwork_url,feed_url,media_count) VALUE (:title,:description,:artwork_url,:feed_url,:media_count)');
@@ -150,7 +208,7 @@ class ProcessPodcastSubscriptions extends Process implements Module, Configurabl
 
 		// find feed
 		$feed = $this->getFeeds('id=' . $id)->first();
-		if(!$feed) throw new \Exception($this->_('Invalid feed id'));
+		if(!$feed) throw new Exception($this->_('Invalid feed id'));
 		$podcast = $this->fetchAndParseFeed($feed->feed_url);
 
 		// Update feed in db and the wireData for return
@@ -200,12 +258,12 @@ class ProcessPodcastSubscriptions extends Process implements Module, Configurabl
 			// Get from database
 			$statement = $this->database->prepare('SELECT * FROM ' . self::dbTableName);
 			$statement->execute();
-			$items = $statement->fetchAll(\PDO::FETCH_CLASS, Feed::class);
+			$items = $statement->fetchAll(PDO::FETCH_CLASS, Feed::class);
 
 			if(!is_array($items)) {
 				$this->feedsCache = null;
 				return $result;
-			};
+			}
 
 			$result = WireArray::newInstance($items);
 			$this->feedsCache = $result;
@@ -218,15 +276,36 @@ class ProcessPodcastSubscriptions extends Process implements Module, Configurabl
 	 * Delete feed by id
 	 * @param int $id
 	 * @return bool
-	 * @throws WireException|\Exception
+	 * @throws WireException|Exception
 	 */
 	public function deleteFeed(int $id) : bool {
 		$feed = $this->getFeeds('id=' . $id)->first();
-		if(!$feed) throw new \Exception($this->_('Invalid feed id'));
+		if(!$feed) throw new Exception($this->_('Invalid feed id'));
 
 		$statement = $this->database->prepare('DELETE FROM '.self::dbTableName.' WHERE id=:id');
-		$statement->bindValue('id', $feed->id, \PDO::PARAM_INT);
+		$statement->bindValue('id', $feed->id, PDO::PARAM_INT);
 		return $statement->execute();
+	}
+
+	/**
+	 * @param Feed $feed
+	 * @param array $meta
+	 * @return Feed
+	 */
+	public function updateFeedMeta(Feed $feed, array $meta = []) {
+		$json = count($meta)
+			? json_encode($meta, JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES)
+			: 'null'
+		;
+
+		$updateStatement = $this->database->prepare('UPDATE '.self::dbTableName.' SET meta=:meta WHERE id=:id;');
+		$updateStatement->execute([
+			'id' => $feed->id,
+			'meta' => $json
+		]);
+
+		// decode in Feed::class because of same behavior of data
+		return $feed->set('meta', $json);
 	}
 
 	/**
@@ -235,13 +314,12 @@ class ProcessPodcastSubscriptions extends Process implements Module, Configurabl
 	 * @throws InvalidXmlException
 	 */
 	public function fetchAndParseFeed($feedUrl) : ?Podcast {
-		$this->loadDependencies();
 
 		$fileContent = $this->files->fileGetContents($feedUrl);
-		if(!$fileContent) throw new \Exception($this->_('Invalid feed url'));
+		if(!$fileContent) throw new Exception($this->_('Invalid feed url'));
 
 		libxml_use_internal_errors(true);
-		$parser = new Parser();
+		$parser = $this->getFeedParserInstance();
 		$parser->setContent($fileContent);
 		$podcast = $parser->run();
 
@@ -300,13 +378,24 @@ class ProcessPodcastSubscriptions extends Process implements Module, Configurabl
 	}
 
 	/**
-	 * @return void
-	 * @throws \Exception
-	 * @method loadDependencies
+	 * Collect data from input or somewhere else to save as additional metadata to the feed
+	 * @return array
+	 * @throws WireException
 	 */
-	public function ___loadDependencies () {
-		if(!file_exists(__DIR__ . '/vendor/autoload.php')) throw new \Exception('Please install podcast-feed-parser in your the module directory (composer install).');
-		require_once(/*NoCompile*/__DIR__ . '/vendor/autoload.php');
+	public function processMetaInput() {
+
+		$meta = [];
+
+		// Subscription links
+		$meta['subscriptionLinks'] = [];
+		foreach($this->subscriptionLinks as $subscriptionLink => $label) {
+			if($url = $this->input->post($subscriptionLink, 'url')) $meta['subscriptionLinks'][$subscriptionLink] = $url;
+		}
+
+		// other stuff
+		// ...
+
+		return $meta;
 	}
 
 	/**
@@ -347,9 +436,133 @@ class ProcessPodcastSubscriptions extends Process implements Module, Configurabl
 	public function uninstall() {
 		try {
 			$this->wire('database')->exec('DROP TABLE ' . self::dbTableName);
-		} catch(\Exception $exception) {
+		} catch(Exception $exception) {
 			$this->error($exception->getMessage());
 		}
+	}
+
+	/**
+	 * Update database schema
+	 * @see https://github.com/teppokoivula/ProcessChangelog/
+	 * from Teppo Koivula
+	 *
+	 * This method applies incremental updates until latest schema version is
+	 * reached, while also keeping schemaVersion config setting up to date.
+	 *
+	 * @throws WireException if database schema version isn't recognized
+	 */
+	public function updateDatabaseSchema() {
+		while ($this->schemaVersion < self::SCHEMA_VERSION) {
+
+			// increment; defaults to 1, but in some cases we may be able to skip over a specific schema update
+			$increment = 1;
+
+			// first we need to figure out which update we're going to trigger, and whether it's one that can be
+			switch ($this->schemaVersion) {
+				case 1:
+					$sql = [
+						"ALTER TABLE `" . self::dbTableName . "` ADD `meta` JSON NOT NULL AFTER `media_count`;",
+					];
+					break;
+				default:
+					throw new WireException("Unrecognized database schema version: {$this->schemaVersion}");
+			}
+
+			// we're ready to execute this update
+			foreach ($sql as $sqlQuery) {
+				$schemaUpdated = $this->executeDatabaseSchemaUpdate($sqlQuery);
+				if (!$schemaUpdated) {
+					break;
+				}
+			}
+
+			// if update fails: log, show notice (if current user is superuser) and continue
+			if (!$schemaUpdated) {
+				$message = sprintf(
+					$this->_("Running database schema update %d failed"),
+					$this->schemaVersion
+				);
+				$this->log->save(self::logFileName, $message);
+				if ($this->user->isSuperuser()) $this->message($message);
+				return;
+			}
+
+			// all's well that ends well
+			$this->schemaVersion += $increment;
+			$configData = $this->modules->getModuleConfigData($this);
+			$configData['schemaVersion'] = $this->schemaVersion;
+			$this->modules->saveModuleConfigData($this, $configData);
+			if ($this->user->isSuperuser()) {
+				$this->message(sprintf(
+					$this->_('ProcessChangelog database schema update applied (#%d).'),
+					$this->schemaVersion - 1
+				));
+			}
+		}
+	}
+
+	/**
+	 * Execute database schema update
+	 *
+	 * @param string $sql
+	 * @return bool
+	 */
+	protected function executeDatabaseSchemaUpdate(string $sql): bool {
+		try {
+			$updatedRows = $this->database->exec($sql);
+			return $updatedRows !== false;
+		} catch (PDOException $e) {
+			if (isset($e->errorInfo[1]) && in_array($e->errorInfo[1], [1060, 1061, 1091])) {
+				// 1060 (column already exists), 1061 (duplicate key name), and 1091 (can't drop index) are errors that
+				// can be safely ignored here; the most likely issue would be that this update has already been applied
+				return true;
+			}
+			// another type of error; log, show notice (if current user is superuser) and return false
+			$message = sprintf(
+				'Error updating schema: %s (%s)',
+				$e->getMessage(),
+				$e->getCode()
+			);
+			$this->log->save(self::logFileName, $message);
+			if ($this->user->isSuperuser()) {
+				$this->error($message);
+			}
+			return false;
+		}
+	}
+
+	/**
+	 * Add all Podcast to dynamic podcast field
+	 * @param HookEvent $event
+	 * @return void
+	 */
+	public function hookPodcastFieldOptions(HookEvent $event) {
+
+			// The page being edited
+			$page = $event->arguments(0);
+
+			// The Dynamic Options field
+			$field = $event->arguments(1);
+
+			if($field->name !== 'podcast') return;
+
+			// Feeds
+			$feeds = $this->getFeeds();
+
+			// Add options
+			$result = [];
+			foreach($feeds as $feed) $result[$feed->id] = $feed->title;
+			$event->return = $result;
+
+	}
+
+	/**
+	 * Get Parser Instance
+	 * @param $args
+	 * @return Parser
+	 */
+	public function ___getFeedParserInstance($args = null) {
+		return new Parser($args);
 	}
 
 }
@@ -357,6 +570,7 @@ class ProcessPodcastSubscriptions extends Process implements Module, Configurabl
 class Feed extends WireData {
 	public function set($key, $value) {
 		if($key === 'id' || $key === 'media_count') $value = (int) $value;
+		elseif($key === 'meta' && is_string($value)) $value = json_decode($value);
 		return parent::set($key, $value);
 	}
 }

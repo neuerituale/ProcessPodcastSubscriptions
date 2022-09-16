@@ -16,7 +16,7 @@ class ProcessPodcastSubscriptionsEpisodes extends WireData implements Module, Co
 	public static function getModuleInfo() {
 		return array(
 			'title' => 'Process Podcast Create Episode Pages',
-			'version' => 101,
+			'version' => 102,
 			'summary' => 'Example Module for creating podcast episodes pages with ProcessPodcastSubscriptions',
 			'icon' => 'clock-o',
 			'requires' => ['LazyCron', 'ProcessPodcastSubscriptions'],

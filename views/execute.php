@@ -15,9 +15,11 @@ namespace ProcessWire;
  * @global PageArray $actionPages
  * @global Modules $modules
  * @global WireArray $feeds
+ * @global array $subscriptionLinks
  * @global Page $page
  * @global WireDateTime $datetime
  */
+
 
 ?>
 
@@ -35,6 +37,63 @@ namespace ProcessWire;
 <?php foreach($feeds as $feed) :
 	$updateUrl = $page->url . 'update/' . $feed->id . '/';
 	$deleteUrl = $page->url . 'delete/' . $feed->id . '/';
+
+	if(count($subscriptionLinks)) {
+
+		/** @var InputfieldForm $subscriptionLinksform */
+		$subscriptionLinksform = $modules->get('InputfieldForm');
+
+		/** @var InputfieldFieldset $subscriptionLinksFieldset */
+		$subscriptionLinksFieldset = $modules->get('InputfieldFieldset');
+		$subscriptionLinksFieldset->skipLabel = Inputfield::collapsedBlank;
+		$subscriptionLinksFieldset->addClass('InputfieldIsClear');
+		$subscriptionLinksFieldset->set('contentClass', 'uk-padding-remove');
+		$subscriptionLinksFieldset->themeBorder = 'none';
+
+		// Url fields
+		foreach($subscriptionLinks as $name => $label) {
+			$value = $feed->meta && $feed->meta->subscriptionLinks && property_exists($feed->meta->subscriptionLinks, $name)
+				? $feed->meta->subscriptionLinks->{$name}
+				: ''
+				;
+
+
+			$subscriptionLinksFieldset->add([
+				'type' => 'Url',
+				'name' => $name,
+				'label' => $label,
+				'value' => $value,
+				'placeholder' => 'https://...',
+				'noRelative' => true,
+				'useLanguages' => false,
+				'wrapClass' => 'InputfieldNoBorder',
+				'headerClass' => 'uk-padding-remove-top',
+				'columnWidth' => 50,
+				'collapsed' => Inputfield::collapsedNever,
+			]);
+		}
+
+		// feed ID
+		$subscriptionLinksFieldset->add([
+			'type' => 'Hidden',
+			'name' => 'feedId',
+			'value' => $feed->id
+		]);
+
+		// Add fieldset
+		$subscriptionLinksform->add($subscriptionLinksFieldset);
+
+		// Save
+		$subscriptionLinksform->add([
+			'type' => 'Submit',
+			'name' => 'feedmeta',
+			'columnWidth' => 100,
+			'wrapClass' => 'uk-child-width-1-2',
+			'value' => __('Save changes')
+		]);
+
+	}
+
 	?>
 
 	<div class="uk-card uk-card-default uk-grid-collapse uk-margin" uk-grid>
@@ -53,13 +112,23 @@ namespace ProcessWire;
 			<div class="uk-card-body">
 				<h3 class="uk-card-title"><?= $feed->title; ?></h3>
 				<p><?= $feed->description; ?></p>
+				<?php if(isset($subscriptionLinksform) && $subscriptionLinksform instanceof InputfieldForm) : ?>
+				<ul uk-accordion="animation: true">
+					<li>
+						<a class="uk-accordion-title uk-width uk-text-default" href="#"><?= __('Subscription links'); ?></a>
+						<div class="uk-accordion-content">
+							<?= $subscriptionLinksform->render(); ?>
+						</div>
+					</li>
+				</ul>
+				<?php endif; ?>
 			</div>
 			<div class="uk-card-footer">
 				<span class="uk-badge uk-padding-small"><?= sprintf(__('%s Episodes'), $feed->media_count); ?></span>
 				<span class="uk-badge uk-padding-small uk-background-secondary uk-text-emphasis"><?= sprintf(__('Updated: %s'), $datetime->relativeTimeStr($feed->modified)); ?></span>
 
-				<a href="<?= $updateUrl; ?>" title="<?= __('Update this feed'); ?>" class="uk-button uk-button-text uk-align-right"><?= __('Update'); ?></a>
-				<a href="<?= $deleteUrl; ?>" title="<?= __('Delete this feed'); ?>" class="uk-button uk-button-text uk-align-right"><?= __('Delete'); ?></a>
+				<a href="<?= $updateUrl; ?>" title="<?= __('Update this feed'); ?>" class="uk-button uk-button-text uk-align-right"><?= _x('Update', 'Button'); ?></a>
+				<a href="<?= $deleteUrl; ?>" title="<?= __('Delete this feed'); ?>" class="uk-button uk-button-text uk-align-right"><?= _x('Delete', 'Button'); ?></a>
 			</div>
 		</div>
 
