@@ -1,7 +1,7 @@
 <?php
 /**
 * COPYRIGHT NOTICE
-* Copyright (c) 2022 Neue Rituale GbR
+* Copyright (c) 2023 Neue Rituale GbR
 * @author NR <code@neuerituale.com>
 */
 
@@ -11,12 +11,17 @@ use Lukaswhite\PodcastFeedParser\Artwork;
 use Lukaswhite\PodcastFeedParser\Episode;
 use Lukaswhite\PodcastFeedParser\Podcast;
 
+/**
+ * @method void updateOrCreatePodcastEpisode(Episode $episode, Podcast $podcast, WireData $feed)
+ * @method NullPage|Page getPodcastEpisodePageByIdOrCreateNew($episode_id, string $title = '')
+ * @method float parseDuration($duration)
+ */
 class ProcessPodcastSubscriptionsEpisodes extends WireData implements Module, ConfigurableModule
 {
 	public static function getModuleInfo() {
 		return array(
 			'title' => 'Process Podcast Create Episode Pages',
-			'version' => 102,
+			'version' => 103,
 			'summary' => 'Example Module for creating podcast episodes pages with ProcessPodcastSubscriptions',
 			'icon' => 'clock-o',
 			'requires' => ['LazyCron', 'ProcessPodcastSubscriptions'],
@@ -55,13 +60,13 @@ class ProcessPodcastSubscriptionsEpisodes extends WireData implements Module, Co
 	 * @param Episode $episode
 	 * @param Podcast $podcast
 	 * @param WireData $feed
-	 * @return void|null
+	 * @return void
 	 * @throws WireException
 	 */
 	public function ___updateOrCreatePodcastEpisode(Episode $episode, Podcast $podcast, WireData $feed) {
 
 		$podcastId = $episode->getGuid();
-		if(!$podcastId) return null;
+		if(!$podcastId) return;
 
 		$title = $episode->getTitle();
 
@@ -153,9 +158,9 @@ class ProcessPodcastSubscriptionsEpisodes extends WireData implements Module, Co
 	/**
 	 * Parse time to seconds
 	 * @param $duration
-	 * @return float|int
+	 * @return float
 	 */
-	public function ___parseDuration($duration) {
+	public function ___parseDuration($duration): float {
 
 		// HH:MM:SS, MM:SS, MMM:SS
 		if (preg_match('/\:/', $duration)) {

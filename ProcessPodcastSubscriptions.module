@@ -1,38 +1,34 @@
 <?php
 /**
 * COPYRIGHT NOTICE
-* Copyright (c) 2022 Neue Rituale GbR
+* Copyright (c) 2023 Neue Rituale GbR
 * @author NR <code@neuerituale.com>
 */
 
 namespace ProcessWire;
 
-use Exception;
 use Lukaswhite\PodcastFeedParser\Exceptions\FileNotFoundException;
 use Lukaswhite\PodcastFeedParser\Exceptions\InvalidXmlException;
 use Lukaswhite\PodcastFeedParser\Parser;
 use Lukaswhite\PodcastFeedParser\Podcast;
-use PDO;
-use PDOException;
-
-require_once(/*NoCompile*/__DIR__ . '/vendor/autoload.php');
 
 /**
+ * @method void processPodcast(WireData $feed, Podcast $podcast)
+ * @method array filterDbFeedInput(string $feedUrl, Podcast $podcast)
+ * @method array filterDbFeedUpdate(int $id, Podcast $podcast)
  * @method Parser getFeedParserInstance($args = null)
  */
-
-class ProcessPodcastSubscriptions extends Process implements Module, ConfigurableModule
-{
+class ProcessPodcastSubscriptions extends Process implements Module, ConfigurableModule {
 
 	const dbTableName = 'podcast_subscriptions';
 	const logFileName = 'podcast-subscriptions';
 	const SCHEMA_VERSION = 2;
 	private ?WireArray $feedsCache = null;
 
-	public static function getModuleInfo() {
-		return array(
+	public static function getModuleInfo(): array {
+		return [
 			'title' => 'Process Podcast Subscriptions',
-			'version' => 102,
+			'version' => 103,
 			'summary' => 'Subscribe Podcast RSS feed and save as new page',
 			'icon' => 'clock-o',
 			'requires' => ['LazyCron'],
@@ -44,7 +40,7 @@ class ProcessPodcastSubscriptions extends Process implements Module, Configurabl
 				'parent' => 'admin',
 				'title' => __('Podcasts'),
 			],
-		);
+		];
 	}
 
 	/**
@@ -72,7 +68,7 @@ class ProcessPodcastSubscriptions extends Process implements Module, Configurabl
 		$this->subscriptionLinks = $subscriptionLinks;
 
 		// find hookname and init lazy cron hook
-		$hookName = @$this->timeFuncs[$this->cronSchedule];
+		$hookName = $this->timeFuncs[$this->cronSchedule] ?? false;
 		if($hookName && $this->modules->isInstalled('LazyCron')) $this->addHook('LazyCron::' . $hookName, $this, 'updateAllFeeds');
 	}
 
@@ -108,7 +104,7 @@ class ProcessPodcastSubscriptions extends Process implements Module, Configurabl
 				$feedUrl = $this->input->post('feed_url', 'url');
 				try {
 					$this->addFeed($feedUrl);
-				} catch(Exception $exception) {
+				} catch(\Exception $exception) {
 					$this->error($exception->getMessage());
 				}
 			}
@@ -171,16 +167,16 @@ class ProcessPodcastSubscriptions extends Process implements Module, Configurabl
 	public function addFeed(string $feedUrl = '') : Podcast {
 
 		// check url
-		if(empty($feedUrl)) throw new Exception($this->_('Empty feed url'));
+		if(empty($feedUrl)) throw new \Exception($this->_('Empty feed url'));
 
 		// duplication check
 		$checkStatement = $this->database->prepare('SELECT * FROM ' . self::dbTableName . ' WHERE feed_url=:feedUrl');
 		$checkStatement->execute(['feedUrl' => $feedUrl]);
-		if($checkStatement->fetchColumn(0)) throw new Exception($this->_('Feed already exists'));
+		if($checkStatement->fetchColumn(0)) throw new \Exception($this->_('Feed already exists'));
 
 		// check feed
 		$podcast = $this->fetchAndParseFeed($feedUrl);
-		if(!$podcast) throw new Exception($this->_('Invalid feed, no type found.'));
+		if(!$podcast) throw new \Exception($this->_('Invalid feed, no type found.'));
 
 		// add to db
 		$addStatement = $this->database->prepare('INSERT INTO ' . self::dbTableName . ' (title,description,artwork_url,feed_url,media_count) VALUE (:title,:description,:artwork_url,:feed_url,:media_count)');
@@ -208,7 +204,7 @@ class ProcessPodcastSubscriptions extends Process implements Module, Configurabl
 
 		// find feed
 		$feed = $this->getFeeds('id=' . $id)->first();
-		if(!$feed) throw new Exception($this->_('Invalid feed id'));
+		if(!$feed) throw new \Exception($this->_('Invalid feed id'));
 		$podcast = $this->fetchAndParseFeed($feed->feed_url);
 
 		// Update feed in db and the wireData for return
@@ -258,7 +254,7 @@ class ProcessPodcastSubscriptions extends Process implements Module, Configurabl
 			// Get from database
 			$statement = $this->database->prepare('SELECT * FROM ' . self::dbTableName);
 			$statement->execute();
-			$items = $statement->fetchAll(PDO::FETCH_CLASS, Feed::class);
+			$items = $statement->fetchAll(\PDO::FETCH_CLASS, Feed::class);
 
 			if(!is_array($items)) {
 				$this->feedsCache = null;
@@ -276,14 +272,14 @@ class ProcessPodcastSubscriptions extends Process implements Module, Configurabl
 	 * Delete feed by id
 	 * @param int $id
 	 * @return bool
-	 * @throws WireException|Exception
+	 * @throws WireException|\Exception
 	 */
 	public function deleteFeed(int $id) : bool {
 		$feed = $this->getFeeds('id=' . $id)->first();
-		if(!$feed) throw new Exception($this->_('Invalid feed id'));
+		if(!$feed) throw new \Exception($this->_('Invalid feed id'));
 
 		$statement = $this->database->prepare('DELETE FROM '.self::dbTableName.' WHERE id=:id');
-		$statement->bindValue('id', $feed->id, PDO::PARAM_INT);
+		$statement->bindValue('id', $feed->id, \PDO::PARAM_INT);
 		return $statement->execute();
 	}
 
@@ -292,7 +288,7 @@ class ProcessPodcastSubscriptions extends Process implements Module, Configurabl
 	 * @param array $meta
 	 * @return Feed
 	 */
-	public function updateFeedMeta(Feed $feed, array $meta = []) {
+	public function updateFeedMeta(Feed $feed, array $meta = []): Feed {
 		$json = count($meta)
 			? json_encode($meta, JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES)
 			: 'null'
@@ -316,7 +312,7 @@ class ProcessPodcastSubscriptions extends Process implements Module, Configurabl
 	public function fetchAndParseFeed($feedUrl) : ?Podcast {
 
 		$fileContent = $this->files->fileGetContents($feedUrl);
-		if(!$fileContent) throw new Exception($this->_('Invalid feed url'));
+		if(!$fileContent) throw new \Exception($this->_('Invalid feed url'));
 
 		libxml_use_internal_errors(true);
 		$parser = $this->getFeedParserInstance();
@@ -343,7 +339,6 @@ class ProcessPodcastSubscriptions extends Process implements Module, Configurabl
 	 *
 	 * @param string $feedUrl
 	 * @param Podcast $podcast
-	 * @param int $id
 	 * @return array
 	 * @throws WireException
 	 */
@@ -382,7 +377,7 @@ class ProcessPodcastSubscriptions extends Process implements Module, Configurabl
 	 * @return array
 	 * @throws WireException
 	 */
-	public function processMetaInput() {
+	public function processMetaInput(): array {
 
 		$meta = [];
 
@@ -405,7 +400,7 @@ class ProcessPodcastSubscriptions extends Process implements Module, Configurabl
 	public function install() {
 
 		// Create Database
-		$this->wire('database')->exec("
+		wire()->database->exec("
 			CREATE TABLE ".self::dbTableName." (
 				`id` int(11) NOT NULL,
 				`title` tinytext NOT NULL,
@@ -435,8 +430,8 @@ class ProcessPodcastSubscriptions extends Process implements Module, Configurabl
 	 */
 	public function uninstall() {
 		try {
-			$this->wire('database')->exec('DROP TABLE ' . self::dbTableName);
-		} catch(Exception $exception) {
+			wire()->database->exec('DROP TABLE ' . self::dbTableName);
+		} catch(\Exception $exception) {
 			$this->error($exception->getMessage());
 		}
 	}
@@ -511,7 +506,7 @@ class ProcessPodcastSubscriptions extends Process implements Module, Configurabl
 		try {
 			$updatedRows = $this->database->exec($sql);
 			return $updatedRows !== false;
-		} catch (PDOException $e) {
+		} catch (\PDOException $e) {
 			if (isset($e->errorInfo[1]) && in_array($e->errorInfo[1], [1060, 1061, 1091])) {
 				// 1060 (column already exists), 1061 (duplicate key name), and 1091 (can't drop index) are errors that
 				// can be safely ignored here; the most likely issue would be that this update has already been applied
@@ -560,9 +555,23 @@ class ProcessPodcastSubscriptions extends Process implements Module, Configurabl
 	 * Get Parser Instance
 	 * @param $args
 	 * @return Parser
+	 * @throws \Exception
 	 */
-	public function ___getFeedParserInstance($args = null) {
+	public function ___getFeedParserInstance($args = null): Parser {
+		$this->loadFeedParserLib();
 		return new Parser($args);
+	}
+
+	/**
+	 * Load PodcastFeedParser Library
+	 * @return void
+	 * @throws \Exception
+	 */
+	public function loadFeedParserLib() {
+		if(!class_exists("\Lukaswhite\PodcastFeedParser\Parser")) {
+			if(!file_exists(__DIR__ . '/vendor/autoload.php')) throw new \Exception("Please install the PodcastFeedParser library via `composer install` in the ProcessPodcastSubscriptions module directory.");
+			require_once(/*NoCompile*/__DIR__ . '/vendor/autoload.php');
+		}
 	}
 
 }

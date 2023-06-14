@@ -1,13 +1,26 @@
 {
     "name": "nr/processpodcastsubscriptions",
+    "type": "pw-module",
+    "description": "Subscribe Podcast RSS feed and save as new page",
+    "keywords": [ "processwire", "module", "podcast" ],
+    "homepage": "https://github.com/neuerituale/ProcessPodcastSubscriptions",
     "license": "MIT",
     "authors": [
         {
             "name": "Neue Rituale",
-            "email": "code@neuerituale.com"
+            "email": "code@neuerituale.com",
+            "homepage": "https://neuerituale.com/",
+            "role": "Developer"
         }
     ],
+    "minimum-stability": "beta",
     "require": {
-        "lukaswhite/podcast-feed-parser": "^0.0.7"
+        "hari/pw-module": "~1.0",
+        "lukaswhite/podcast-feed-parser": "^1.2.0"
+    },
+    "config": {
+        "allow-plugins": {
+            "hari/pw-module": true
+        }
     }
 }

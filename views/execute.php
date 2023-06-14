@@ -109,24 +109,20 @@ namespace ProcessWire;
 		</div>
 
 		<div class="uk-width-2-3@s uk-width-3-4@l">
-			<div class="uk-card-body">
-				<h3 class="uk-card-title"><?= $feed->title; ?></h3>
+			<div class="uk-card-body uk-padding-remove-bottom">
+				<h3 class="uk-card-title uk-margin-remove-bottom"><?= $feed->title; ?></h3>
+				<p class="uk-text-small uk-text-muted uk-margin-remove-top"><?= $feed['feed_url']; ?></p>
 				<p><?= $feed->description; ?></p>
 				<?php if(isset($subscriptionLinksform) && $subscriptionLinksform instanceof InputfieldForm) : ?>
-				<ul uk-accordion="animation: true">
-					<li>
-						<a class="uk-accordion-title uk-width uk-text-default" href="#"><?= __('Subscription links'); ?></a>
-						<div class="uk-accordion-content">
-							<?= $subscriptionLinksform->render(); ?>
-						</div>
-					</li>
-				</ul>
+					<div id="subscription-links-<?= $feed->id; ?>" hidden><?= $subscriptionLinksform->render(); ?></div>
 				<?php endif; ?>
 			</div>
-			<div class="uk-card-footer">
-				<span class="uk-badge uk-padding-small"><?= sprintf(__('%s Episodes'), $feed->media_count); ?></span>
+			<div class="uk-card-footer uk-margin-top">
+				<span class="uk-badge uk-padding-small uk-background-secondary uk-text-emphasis"><?= sprintf(__('%s Episodes'), $feed->media_count); ?></span>
 				<span class="uk-badge uk-padding-small uk-background-secondary uk-text-emphasis"><?= sprintf(__('Updated: %s'), $datetime->relativeTimeStr($feed->modified)); ?></span>
-
+				<?php if(isset($subscriptionLinksform) && $subscriptionLinksform instanceof InputfieldForm) : ?>
+					<span uk-toggle="target: #subscription-links-<?= $feed->id; ?>; animation: uk-animation-fade" class="uk-button uk-button-text uk-align-right"><?= _x('Subscription links', 'Button'); ?></span>
+				<?php endif; ?>
 				<a href="<?= $updateUrl; ?>" title="<?= __('Update this feed'); ?>" class="uk-button uk-button-text uk-align-right"><?= _x('Update', 'Button'); ?></a>
 				<a href="<?= $deleteUrl; ?>" title="<?= __('Delete this feed'); ?>" class="uk-button uk-button-text uk-align-right"><?= _x('Delete', 'Button'); ?></a>
 			</div>

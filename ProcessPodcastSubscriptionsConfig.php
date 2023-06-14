@@ -1,12 +1,11 @@
 <?php
 /**
  * COPYRIGHT NOTICE
- * Copyright (c) 2021 Neue Rituale GbR
+ * Copyright (c) 2023 Neue Rituale GbR
  * @author NR <code@neuerituale.com>
  */
 
 namespace ProcessWire;
-
 
 class ProcessPodcastSubscriptionsConfig extends ModuleConfig
 {
@@ -14,7 +13,7 @@ class ProcessPodcastSubscriptionsConfig extends ModuleConfig
 	 * @return array
 	 * @throws WireException
 	 */
-	public function getDefaults() {
+	public function getDefaults(): array {
 
 		// get schedules from Lazy Cron
 		$lazyCronInstance = $this->modules->get('LazyCron');
@@ -30,9 +29,8 @@ class ProcessPodcastSubscriptionsConfig extends ModuleConfig
 
 	/**
 	 * @return InputfieldWrapper
-	 * @throws WireException
 	 */
-	public function getInputfields() {
+	public function getInputfields(): InputfieldWrapper {
 
 		$inputfields = parent::getInputfields();
 

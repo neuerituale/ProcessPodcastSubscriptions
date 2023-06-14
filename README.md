@@ -1,7 +1,6 @@
 # ProcessPodcastSubscriptions
 
 ## What it does
-
 Subscribe to podcast RSS feeds and save the data as anything you want.
 The module uses the great PHP Library [podcast-feed-parser](https://github.com/lukaswhite/podcast-feed-parser) by
 Lukas White, which makes processing the podcast data a breeze. Thanks!
@@ -16,7 +15,6 @@ The module comes with an example module `ProcessPodcastSubscriptionsEpisodes` to
 - Optional module `ProcessPodcastSubscriptionsEpisodes`
 
 ## Install
-
 1. Copy the files for this module to /site/modules/ProcessPodcastSubscriptions/
 2. Execute the following command in the /site/modules/ProcessPodcastSubscriptions/ directory.
    ```bash
@@ -26,9 +24,13 @@ The module comes with an example module `ProcessPodcastSubscriptionsEpisodes` to
 4. Install the additional module `ProcessPodcastSubscriptionsEpisodes` (optional) or build your own processor
 5. Subscribe to Podcast feeds...
 
+## Install via composer
+1. Execute the following command in your website root directory.
+   ```bash
+   composer require nr/processpodcastsubscriptions
+   ```
 
 ## Configuration Subscriptions
-
 `Modules` > `Configure` > `ProcessPodcastSubscriptions`
 
 ###  Lazycron

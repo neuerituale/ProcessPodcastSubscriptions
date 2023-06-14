@@ -110,7 +110,7 @@ $podcastSubscription = $modules->getModule('ProcessPodcastSubscriptions', ['noPe
 												: $datetime->formatDate($episode->created, '%e. %h %Y'); ?>
 										</time>
 									</span>
-									<span style="white-space: nowrap"><?= sprintf(__('%d min.'), round($episode->episode_duration/60, 0)); ?></span>
+									<span style="white-space: nowrap"><?= sprintf(__('%d min.'), round((int)$episode->episode_duration/60, 0)); ?></span>
 								</div>
 
 							</a>
