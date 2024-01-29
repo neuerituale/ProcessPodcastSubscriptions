@@ -233,9 +233,12 @@ class ProcessPodcastSubscriptions extends Process implements Module, Configurabl
 	public function updateAllFeeds() : ProcessPodcastSubscriptions {
 
 		$feeds = $this->getFeeds('', true);
-		foreach($feeds as $feed)  $this->updateFeed($feed->id, false);
-		$this->feedsCache = null;
+        foreach($feeds as $feed) {
+            try { $this->updateFeed($feed->id, false); }
+            catch ( \Exception $exception ) { $this->log('Error:' . $exception->getMessage(), ['name' => self::logFileName]); }
+        }
 
+		$this->feedsCache = null;
 		return $this;
 	}
 
@@ -312,7 +315,7 @@ class ProcessPodcastSubscriptions extends Process implements Module, Configurabl
 	public function fetchAndParseFeed($feedUrl) : ?Podcast {
 
 		$fileContent = $this->files->fileGetContents($feedUrl);
-		if(!$fileContent) throw new \Exception($this->_('Invalid feed url'));
+		if(!$fileContent) throw new \Exception(sprintf($this->_("Invalid feed url: %s"), $feedUrl ?: ''));
 
 		libxml_use_internal_errors(true);
 		$parser = $this->getFeedParserInstance();
