@@ -28,7 +28,7 @@ class ProcessPodcastSubscriptions extends Process implements Module, Configurabl
 	public static function getModuleInfo(): array {
 		return [
 			'title' => 'Process Podcast Subscriptions',
-			'version' => 103,
+			'version' => 104,
 			'summary' => 'Subscribe Podcast RSS feed and save as new page',
 			'icon' => 'clock-o',
 			'requires' => ['LazyCron'],
